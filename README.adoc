@@ -1,0 +1,180 @@
+== Gematik Gradle Plugins
+
+=== Description
+
+This Plugin supports easy documentation in AsciiDoc format and also JavaDoc in AsciiDoc format.
+For that is an comprehensive configuration defined.
+
+=== Configuration
+
+The plugins are configured via the gradle file in a configuration block gematikDocumentation {}.
+The following parameters are available:
+
+.Table Title
+|===
+|Parameter |Description |Mandatory|Default-Value|Used by
+
+|projectShortcut
+|Jira abbreviation for the project
+|✓
+|--
+a|* DocumentationPlugin
+* AsciidoctorPlugin
+* JavaDocPlugin
+
+|plantUmlDestinationFolder
+|Target directory for copying PlantUmls from src/main/java/**
+|✗
+|doc/plantuml/{projectShortcut}
+a|* DocumentationPlugin
+* AsciidoctorPlugin
+* JavaDocPlugin
+
+|javadocUrl
+|Title link URL for Javadoc
+|✗
+|--
+a|* JavaDocPlugin
+
+|javadocOverviewAdoc
+|Document that should be shown in the overview with Javadoc
+|✗
+|doc/userguide/{projectShortcut}_Introduction.adoc
+a|* JavaDocPlugin
+
+|javadocDestinationFolder
+|Output-Directory for JavaDocs
+|✗
+|Gradle Default is ${project.docsDir}/javadoc
+a|* JavaDocPlugin
+
+|javadocAttributesFile
+|Configuration file for Asciidocs in Javadoc
+|✗
+|doc/javadoc/config.adoc
+a|* JavaDocPlugin
+
+|documentVersionReference
+|Name of the reference in the Asciidoc documents to be replaced with the current Project version
+|✗
+|version_{projectShortcut}
+a|* AsciidoctorPlugin
+
+|asciidocRootSourceDir
+|Source root folder for {asciidocRootSourceDir}/userguide/{projectShortcut}_Main.adoc
+|✗
+|doc
+a|* AsciidoctorPlugin
+
+|asciidocDestinationFolder
+|Output-Directory for Asciidocs
+|✗
+|${project.buildDir.path}/documentation
+a|* AsciidoctorPlugin
+
+|===
+
+.Example Configuration
+[source,Groovy]
+gematikDocumentation {
+    projectShortcut = "HCARDA"
+    documentVersionReference = "version_healthcard_access"
+}
+
+== DocumentationPlugin
+
+This plugin defines global settings and basis for the following plugins.
+This plugin adds the following other plugins, dependencies and tasks:
+
+=== Plugins
+
+|===
+|PluginId |Version |Additional Information
+
+|com.github.jruby-gradle.bas | 1.6.0 | https://plugins.gradle.org/plugin/com.github.jruby-gradle.base
+|com.github.jeysal.graphviz | 1.4.1 | https://github.com/jeysal/gradle-graphviz-plugin
+|===
+
+=== Dependencies
+
+|===
+|Dependency |Configuration |Version |Additional Information
+
+|org.asciidoctor:asciidoclet |asciidoclet |1.5.6 |https://asciidoctor.org/docs/asciidoctorj/
+|rubygems:asciidoctor| gems| 1.5.8| https://asciidoctor.org/docs/asciidoctorj/
+|rubygems:asciidoctor-diagram| gems| 1.5.19 | https://asciidoctor.org/docs/asciidoctor-diagram/
+
+|rubygems:concurrent-ruby| gems| 1.1.5| https://github.com/ruby-concurrency/concurrent-ruby
+|===
+
+=== Tasks
+
+==== copyPlantumlsToDocDir
+
+This task copies all ***.plantuml** files from **PROJECT/src/main/java** to **{plantUmlDestinationFolder}**
+
+.Add copyPlantumlsToDocDir
+[source,Groovy]
+buildscript {
+    dependencies {
+        classpath "de.gematik:documentation-plugin:1.1.0"
+    }
+}
+apply plugin: "de.gematik.asciidoctor"
+
+== JavaDocPlugin
+
+This plugin creates the JavaDoc with Plantumls and Asciidoc Files.
+The plugin functionality would automatically executed for **publishToMavenLocal** task or manuel with
+
+**#> gradle javadoc** (this task also calls the copyPlantumlsToDocDir task)
+
+Output: {javadocDestinationFolder} or default PROJECT\build\docs\javadoc
+
+=== Plugins
+
+|===
+|PluginId |Version |Additional Information
+|org.asciidoctor.convert| 1.4.1| https://plugins.gradle.org/plugin/org.asciidoctor.convert
+
+|===
+
+=== Integration
+
+.Add JavaDocPlugin
+[source,Groovy]
+buildscript {
+    dependencies {
+        classpath "de.gematik:documentation-plugin:1.1.0"
+    }
+}
+apply plugin: "de.gematik.javadoc"
+
+== AsciidoctorPlugin
+
+This plugin takes care of generation AsciiDoc in PDF and HTML pages.
+The source file **{asciidocRootSourceDir}/userguide/{projectShortcut}_Main.adoc** is used.
+
+Manual execution:
+**#> gradle asciidoctor** (This task also calls the copyPlantumlsToDocDir task)
+
+Output: {asciidocDestinationFolder}
+
+=== Plugins
+
+|===
+|PluginId |Version |Additional Information
+|org.asciidoctor.convert| 1.4.1| https://plugins.gradle.org/plugin/org.asciidoctor.convert
+
+|===
+
+=== Integration
+
+.Add JavaDocPlugin
+[source,Groovy]
+buildscript {
+    dependencies {
+        classpath "de.gematik:documentation-plugin:1.1.0"
+    }
+}
+apply plugin: "de.gematik.asciidoctor"

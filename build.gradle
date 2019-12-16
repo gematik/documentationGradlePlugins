@@ -1,0 +1,194 @@
+apply plugin: 'nu.studer.credentials'
+apply plugin: 'maven-publish'
+apply plugin: 'maven'
+apply plugin: 'java'
+apply plugin: 'groovy'
+
+group = 'de.gematik'
+version = file('version.txt').text.trim()
+
+repositories {
+    maven { url "http://rubygems-proxy.torquebox.org/releases" }
+}
+
+dependencies {
+    compileOnly gradleApi()
+    runtime "org.asciidoctor:asciidoctor-gradle-plugin:1.5.9.2"
+    runtime "org.asciidoctor:asciidoctorj-pdf:1.5.0-beta.7"
+    runtime "com.github.jeysal:gradle-graphviz-plugin:1.4.1"
+    runtime "com.github.jruby-gradle:jruby-gradle-plugin:1.6.0"
+}
+
+if (project.hasProperty('signing.secretKeyRingFile')) {
+    apply plugin: 'signing'
+
+    signing {
+        sign configurations.archives
+        //sign publishing.publications.mavenJava
+    }
+    model {
+        tasks.generatePomFileForMavenJavaPublication {
+            destination = file("$buildDir/generated-pom.xml")
+        }
+        tasks.publishMavenJavaPublicationToMavenLocal {
+            dependsOn project.tasks.signArchives
+        }
+
+    }
+}
+
+javadoc {
+    source = sourceSets.main.allJava
+    classpath = configurations.compile
+    failOnError = false
+}
+
+task sourceJar(type: Jar) {
+    classifier "sources"
+    from sourceSets.main.allJava
+}
+
+task javadocJar(type: Jar) {
+    archiveClassifier.set("javadoc")
+    from "${project.buildDir}/docs/groovydoc/"
+    into "${project.name}"
+}
+
+task groovydocJar(type: Jar) {
+    archiveClassifier.set("groovydoc")
+    from "${project.buildDir}/docs/groovydoc/"
+    into "${project.name}"
+}
+
+artifacts {
+    archives jar
+    archives sourceJar
+    archives javadocJar
+    archives groovydocJar
+}
+
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            artifact sourceJar
+            artifact javadocJar
+            artifact groovydocJar
+            from components.java
+            if (project.hasProperty('signing.secretKeyRingFile')) {
+                customizePom(pom)
+
+                // create the sign pom artifact
+                pom.withXml {
+                    def pomFile = file("${project.buildDir}/generated-pom.xml")
+                    writeTo(pomFile)
+                    def pomAscFile = signing.sign(pomFile).signatureFiles[0]
+                    artifact(pomAscFile) {
+                        classifier = null
+                        extension = 'pom.asc'
+                    }
+                }
+
+
+                // create the signed artifacts
+                project.tasks.signArchives.signatureFiles.each {
+                    artifact(it) {
+                        def matcher = it.file =~ /-(sources|javadoc|groovydoc)\.jar\.asc$/
+                        if (matcher.find()) {
+                            classifier = matcher.group(1)
+                        } else {
+                            classifier = null
+                        }
+                        extension = 'jar.asc'
+                    }
+                }
+            }
+        }
+    }
+}
+
+if (project.hasProperty('signing.secretKeyRingFile')) {
+    uploadArchives {
+        repositories {
+            mavenDeployer {
+                customizePom(pom)
+                beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
+            }
+        }
+    }
+}
+
+def customizePom(pom) {
+    pom.withXml {
+        def root = asNode()
+
+        // add all items necessary for maven central publication
+        root.children().last() + {
+            resolveStrategy = Closure.DELEGATE_FIRST
+
+            description 'This Plugin supports easy documentation in AsciiDoc format and also JavaDoc in AsciiDoc format.'
+            name 'Gematik Documentation Gradle Plugin'
+            url 'https://github.com/gematik/documentationGradlePlugins'
+            organization {
+                name 'de.gematik'
+                url 'https://github.com/gematik'
+            }
+            issueManagement {
+                system 'GitHub'
+                url 'https://github.com/gematik/documentationGradlePlugins/issues'
+            }
+            licenses {
+                license {
+                    name 'Apache License 2.0'
+                    url 'https://www.apache.org/licenses/LICENSE-2.0.txt'
+                }
+            }
+            scm {
+                url 'https://github.com/gematik/' + 'documentationGradlePlugins'
+                connection 'scm:git:git://github.com/gematik/documentationGradlePlugins.git'
+                developerConnection 'scm:git:ssh://git@github.com:gematik/documentationGradlePlugins.git'
+            }
+            developers {
+                developer {
+                    name 'Gematik'
+                }
+            }
+        }
+    }
+}
+
+task deploy {
+    println ""
+    println ""
+    println "##################################################################################"
+    println "##################################################################################"
+    println ""
+    println ""
+    println "           ######   ######## ##     ##    ###    ######## #### ##    ## "
+    println "          ##    ##  ##       ###   ###   ## ##      ##     ##  ##   ##  "
+    println "          ##        ##       #### ####  ##   ##     ##     ##  ##  ##   "
+    println "          ##   #### ######   ## ### ## ##     ##    ##     ##  #####    "
+    println "          ##    ##  ##       ##     ## #########    ##     ##  ##  ##   "
+    println "          ##    ##  ##       ##     ## ##     ##    ##     ##  ##   ##  "
+    println "           ######   ######## ##     ## ##     ##    ##    #### ##    ## "
+    println ""
+    println ""
+    println "##################################################################################"
+    println "##################################################################################"
+    println ""
+    println ""
+    println "**********************************************************************************"
+    println "**********************************************************************************"
+    println "***********         Baut das Gematik Documentation Plugin         ****************"
+    println "***********                                                       ****************"
+    println "**********************************************************************************"
+    println "**********************************************************************************"
+    println ""
+    println ""
+}
+
+uploadArchives.dependsOn createPublishTarget
+uploadArchives.dependsOn build
+publishToMavenLocal.dependsOn build
+deploy.dependsOn uploadArchives
+deploy.dependsOn publishToMavenLocal
