@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 gematik GmbH
+ * Copyright (c) 2020 gematik GmbH
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@ class AsciidoctorPlugin extends DocumentationPlugin {
     @Override
     void apply(final Project project) {
         super.apply(project)
+
         project.getPluginManager().apply("org.asciidoctor.convert")
         project.tasks.asciidoctor.dependsOn(project.tasks.copyPlantumlsToDocDir)
         project.tasks.asciidoctor.doFirst {

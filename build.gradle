@@ -7,10 +7,6 @@ apply plugin: 'groovy'
 group = 'de.gematik'
 version = file('version.txt').text.trim()
 
-repositories {
-    maven { url "http://rubygems-proxy.torquebox.org/releases" }
-}
-
 dependencies {
     compileOnly gradleApi()
     runtime "org.asciidoctor:asciidoctor-gradle-plugin:1.5.9.2"
@@ -24,7 +20,6 @@ if (project.hasProperty('signing.secretKeyRingFile')) {
 
     signing {
         sign configurations.archives
-        //sign publishing.publications.mavenJava
     }
     model {
         tasks.generatePomFileForMavenJavaPublication {
@@ -150,7 +145,11 @@ def customizePom(pom) {
             }
             developers {
                 developer {
-                    name 'Gematik'
+                    name 'gematik'
+                    email 'referenzimplementierung@gematik.de'
+                    url 'https://gematik.github.io/'
+                    organization 'gematik'
+                    organizationUrl 'https://www.gematik.de/'
                 }
             }
         }
@@ -179,7 +178,7 @@ task deploy {
     println ""
     println "**********************************************************************************"
     println "**********************************************************************************"
-    println "***********         Baut das Gematik Documentation Plugin         ****************"
+    println "***********           Build Gematik Documentation Plugin          ****************"
     println "***********                                                       ****************"
     println "**********************************************************************************"
     println "**********************************************************************************"

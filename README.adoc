@@ -117,7 +117,7 @@ This task copies all ***.plantuml** files from **PROJECT/src/main/java** to **{p
 [source,Groovy]
 buildscript {
     dependencies {
-        classpath "de.gematik:documentation-plugin:1.1.0"
+        classpath "de.gematik:documentation-plugin:1.1.1"
     }
 }
 apply plugin: "de.gematik.asciidoctor"
@@ -145,7 +145,7 @@ Output: {javadocDestinationFolder} or default PROJECT\build\docs\javadoc
 [source,Groovy]
 buildscript {
     dependencies {
-        classpath "de.gematik:documentation-plugin:1.1.0"
+        classpath "de.gematik:documentation-plugin:1.1.1"
     }
 }
 apply plugin: "de.gematik.javadoc"
@@ -174,7 +174,35 @@ Output: {asciidocDestinationFolder}
 [source,Groovy]
 buildscript {
     dependencies {
-        classpath "de.gematik:documentation-plugin:1.1.0"
+        classpath "de.gematik:documentation-plugin:1.1.1"
     }
 }
 apply plugin: "de.gematik.asciidoctor"
+
+== Repository for dependencies
+
+The Plugin needs the following repository definition in your init.gradle
+
+.Add Repository jcenter
+[source,Groovy]
+allprojects {
+    buildscript {
+        repositories {
+            jcenter()
+        }
+    }
+}
+
+or this
+
+.Add Repository plugins.gradle.org
+[source,Groovy]
+allprojects {
+    buildscript {
+        repositories {
+            maven {
+                url "https://plugins.gradle.org/m2/"
+            }
+        }
+    }
+}
