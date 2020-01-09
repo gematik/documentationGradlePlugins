@@ -1,3 +1,7 @@
+# Release 1.1.2
+- generate Javadoc without timestamp comment 
+- correct organisation name
+
 # Release 1.1.1
 - Add automatic rubygems repository for https://rubygems.org 
 - Extends Documentation for needed repositories to use plugins 

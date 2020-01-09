@@ -65,6 +65,7 @@ class JavaDocPlugin extends DocumentationPlugin {
                 options.addStringOption "-gem-path", "${project.tasks.jrubyPrepare.outputDir}"
                 options.addStringOption "encoding", "UTF-8"
                 options.addStringOption "charset", "UTF-8"
+                options.addBooleanOption "notimestamp", true
                 def javadocUrl = gematikAsciidoctor.javadocUrl
                 def data = "data-uri," +
                         "name=${project.name}," +
