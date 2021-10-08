@@ -1,14 +1,14 @@
 /*
- * Copyright (c) 2020 gematik GmbH
+ * Copyright (c) 2021 gematik GmbH
  * 
- * Licensed under the Apache License, Version 2.0 (the "License");
+ * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  * 
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  * 
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
+ * distributed under the License is distributed on an 'AS IS' BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
@@ -25,47 +25,54 @@ import org.gradle.api.logging.StandardOutputListener
  */
 class AsciidoctorPlugin extends DocumentationPlugin {
 
-    public static final String VERSION_ASCIIDOCTORJ = '1.6.2'
-
     @Override
     void apply(final Project project) {
         super.apply(project)
 
-        project.getPluginManager().apply("org.asciidoctor.convert")
+        project.getPluginManager().apply("org.asciidoctor.jvm.convert")
+        project.getPluginManager().apply("org.asciidoctor.jvm.pdf")
         project.tasks.asciidoctor.dependsOn(project.tasks.copyPlantumlsToDocDir)
+        project.tasks.asciidoctor.dependsOn(project.tasks.asciidoctorPdf)
+        project.tasks.asciidoctor.doLast { project.tasks.asciidoctorPdf }
         project.tasks.asciidoctor.doFirst {
             project.tasks.copyPlantumlsToDocDir
         }
-        project.extensions.getByName("asciidoctorj").version = VERSION_ASCIIDOCTORJ
+
+        project.afterEvaluate { p ->
+            project.asciidoctorj {
+                modules {
+                    diagram.use()
+                    diagram.version '1.5.16'
+                }
+            }
+        }
+        def gematikAsciidoctor = project.extensions.findByType(DocumentationPluginExtension)
+        def asciidocRootSourceDir = 'doc'
+        if (gematikAsciidoctor.asciidocRootSourceDir != null)
+            asciidocRootSourceDir = gematikAsciidoctor.asciidocRootSourceDir
+        def asciidocDestinationFolder = project.buildDir.path + '/documentation'
+        if (gematikAsciidoctor.asciidocDestinationFolder != null)
+            asciidocDestinationFolder = gematikAsciidoctor.asciidocDestinationFolder
+
+        println "AsciidoctorPlugin use asciidoctorj: " + project.extensions.getByName("asciidoctorj").version
 
         project.afterEvaluate { p ->
             project.asciidoctor {
-                def gematikAsciidoctor = project.extensions.findByType(DocumentationPluginExtension)
-                def asciidocRootSourceDir = 'doc'
-                if (gematikAsciidoctor.asciidocRootSourceDir != null)
-                    asciidocRootSourceDir = gematikAsciidoctor.asciidocRootSourceDir
-                def asciidocDestinationFolder = project.buildDir.path + '/documentation'
-                if (gematikAsciidoctor.asciidocDestinationFolder != null)
-                    asciidocDestinationFolder = gematikAsciidoctor.asciidocDestinationFolder
-                println "AsciidoctorPlugin use asciidoctorj: " + project.extensions.getByName("asciidoctorj").version
 
-                dependsOn project.tasks.jrubyPrepare
-
-                requires = ['asciidoctor-diagram']
-                gemPath = project.tasks.jrubyPrepare.outputDir
-                sourceDir = project.file(asciidocRootSourceDir)
+                baseDir project.file(asciidocRootSourceDir + "/userguide")
+                sourceDir project.file(asciidocRootSourceDir)
                 sources {
-                    include 'userguide/' + gematikAsciidoctor.projectShortcut + '_Main.adoc'
+                    include "userguide/" + gematikAsciidoctor.projectShortcut + '_Main.adoc'
                 }
-                backends = ['html5', 'pdf']
-                outputDir = project.file(asciidocDestinationFolder)
                 def versionReference = gematikAsciidoctor.documentVersionReference
                 if (versionReference == null)
                     versionReference = "version_" + gematikAsciidoctor.projectShortcut
                 if (project.file('version.txt').exists())
-                    attributes.put(versionReference, project.file('version.txt').text.trim())
+                    attributes "${versionReference}" : project.file('version.txt').text.trim()
                 else
-                    attributes.put(versionReference, project.file('../version.txt').text.trim())
+                    attributes "${versionReference}" : project.file('../version.txt').text.trim()
+
+                outputDir = project.file(asciidocDestinationFolder)
 
                 //Used to break the build if includes not found
                 ext.capturedOutput = []
@@ -82,6 +89,27 @@ class AsciidoctorPlugin extends DocumentationPlugin {
                             throw new RuntimeException("Include file(s) not found.\n" + output)
                         }
                     }
+                }
+            }
+        }
+
+        project.afterEvaluate { p ->
+            project.asciidoctorPdf {
+                baseDir project.file(asciidocRootSourceDir + "/userguide")
+                sourceDir project.file(asciidocRootSourceDir)
+                sources {
+                    include 'userguide/' + gematikAsciidoctor.projectShortcut + '_Main.adoc'
+                }
+                outputDir = project.file(asciidocDestinationFolder)
+                asciidoctorj {
+                    attributes 'source-highlighter': 'rouge'
+                    def versionReference = gematikAsciidoctor.documentVersionReference
+                    if (versionReference == null)
+                        versionReference = "version_" + gematikAsciidoctor.projectShortcut
+                    if (project.file('version.txt').exists())
+                        attributes "${versionReference}" : project.file('version.txt').text.trim()
+                    else
+                        attributes "${versionReference}" : project.file('../version.txt').text.trim()
                 }
             }
         }

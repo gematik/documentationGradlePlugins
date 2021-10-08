@@ -2,3 +2,9 @@
 .idea/
 out/
 build/
+
+githubPublish.jenkinsfile
+release.jenkinsfile
+githubBuild.jenkinsfile
+ciExtern.jenkinsfile
+ci.jenkinsfile

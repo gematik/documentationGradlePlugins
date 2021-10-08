@@ -1,18 +1,20 @@
-apply plugin: 'nu.studer.credentials'
+if (!project.buildscript.configurations.getByName("classpath").filter { a -> a.toString().contains("nu.studer") }.isEmpty()) {
+    apply plugin: 'nu.studer.credentials'
+}
 apply plugin: 'maven-publish'
-apply plugin: 'maven'
 apply plugin: 'java'
 apply plugin: 'groovy'
+apply plugin: 'jacoco'
+apply plugin: 'org.sonarqube'
+apply plugin: 'org.owasp.dependencycheck'
 
 group = 'de.gematik'
 version = file('version.txt').text.trim()
 
 dependencies {
     compileOnly gradleApi()
-    runtime "org.asciidoctor:asciidoctor-gradle-plugin:1.5.9.2"
-    runtime "org.asciidoctor:asciidoctorj-pdf:1.5.0-beta.7"
-    runtime "com.github.jeysal:gradle-graphviz-plugin:1.4.1"
-    runtime "com.github.jruby-gradle:jruby-gradle-plugin:1.6.0"
+    implementation "org.asciidoctor:asciidoctor-gradle-jvm:3.3.2"
+    implementation "org.asciidoctor.jvm.pdf:org.asciidoctor.jvm.pdf.gradle.plugin:3.3.2"
 }
 
 if (project.hasProperty('signing.secretKeyRingFile')) {
@@ -34,7 +36,6 @@ if (project.hasProperty('signing.secretKeyRingFile')) {
 
 javadoc {
     source = sourceSets.main.allJava
-    classpath = configurations.compile
     failOnError = false
 }
 
@@ -45,12 +46,14 @@ task sourceJar(type: Jar) {
 
 task javadocJar(type: Jar) {
     archiveClassifier.set("javadoc")
+    dependsOn("javadoc")
     from "${project.buildDir}/docs/groovydoc/"
     into "${project.name}"
 }
 
 task groovydocJar(type: Jar) {
     archiveClassifier.set("groovydoc")
+    dependsOn("groovydoc")
     from "${project.buildDir}/docs/groovydoc/"
     into "${project.name}"
 }
@@ -64,6 +67,21 @@ artifacts {
 
 
 publishing {
+    repositories {
+        maven {
+            name = 'Nexus'
+            credentials {
+                username project.getProperty("SERVER_NEXUS_USERNAME")
+                password project.getProperty("SERVER_NEXUS_PASSWORD")
+            }
+            if(project.version.endsWith('-SNAPSHOT')) {
+                url project.getProperty("SNAPSHOT_REPOSITORY")
+            } else {
+                url project.getProperty("RELEASE_REPOSITORY")
+            }
+        }
+    }
+
     publications {
         mavenJava(MavenPublication) {
             artifact sourceJar
@@ -73,41 +91,9 @@ publishing {
             if (project.hasProperty('signing.secretKeyRingFile')) {
                 customizePom(pom)
 
-                // create the sign pom artifact
-                pom.withXml {
-                    def pomFile = file("${project.buildDir}/generated-pom.xml")
-                    writeTo(pomFile)
-                    def pomAscFile = signing.sign(pomFile).signatureFiles[0]
-                    artifact(pomAscFile) {
-                        classifier = null
-                        extension = 'pom.asc'
-                    }
+                project.signing {
+                    sign publishing.publications.mavenJava
                 }
-
-
-                // create the signed artifacts
-                project.tasks.signArchives.signatureFiles.each {
-                    artifact(it) {
-                        def matcher = it.file =~ /-(sources|javadoc|groovydoc)\.jar\.asc$/
-                        if (matcher.find()) {
-                            classifier = matcher.group(1)
-                        } else {
-                            classifier = null
-                        }
-                        extension = 'jar.asc'
-                    }
-                }
-            }
-        }
-    }
-}
-
-if (project.hasProperty('signing.secretKeyRingFile')) {
-    uploadArchives {
-        repositories {
-            mavenDeployer {
-                customizePom(pom)
-                beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
             }
         }
     }
@@ -186,8 +172,9 @@ task deploy {
     println ""
 }
 
-uploadArchives.dependsOn createPublishTarget
-uploadArchives.dependsOn build
+build.dependsOn javadoc
+build.dependsOn groovydoc
+publish.dependsOn build
 publishToMavenLocal.dependsOn build
-deploy.dependsOn uploadArchives
+deploy.dependsOn publish
 deploy.dependsOn publishToMavenLocal

@@ -1,3 +1,6 @@
+# Release 1.2.0
+Update for Gradle 7 Support
+
 # Release 1.1.2
 - generate Javadoc without timestamp comment 
 - correct organisation name
